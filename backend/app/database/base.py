@@ -1,0 +1,5 @@
+from backend.app.database.database import Base
+
+from backend.app.models.company import Company
+from backend.app.models.customer import Customer
+from backend.app.models.package import Package
