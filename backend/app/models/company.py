@@ -1,4 +1,5 @@
 from datetime import datetime
+from sqlalchemy.orm import relationship
 
 from sqlalchemy import Boolean, Column, DateTime, Integer, String
 
@@ -26,3 +27,9 @@ class Company(Base):
     is_active = Column(Boolean, default=True)
 
     created_at = Column(DateTime, default=datetime.utcnow)
+    
+    users = relationship(
+    "User",
+    back_populates="company",
+    cascade="all, delete-orphan"
+)

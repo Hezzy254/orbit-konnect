@@ -1,3 +1,4 @@
+from .company import Company
 from .customer import Customer
 from .package import Package
-from .company import Company
+from .user import User
