@@ -1,9 +1,9 @@
-from datetime import datetime
-
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
+from datetime import datetime, UTC
 
 from backend.app.database.database import Base
+from backend.app.models.roles import UserRole
 
 
 class User(Base):
@@ -11,30 +11,30 @@ class User(Base):
 
     id = Column(Integer, primary_key=True, index=True)
 
+    email = Column(String, unique=True, index=True, nullable=False)
+
+    hashed_password = Column(String, nullable=False)
+
+    full_name = Column(String, nullable=False)
+
+    role = Column(
+        String,
+        default=UserRole.TECHNICIAN.value,
+        nullable=False,
+    )
+
     company_id = Column(
         Integer,
         ForeignKey("companies.id"),
-        nullable=False
+        nullable=False,
     )
 
-    first_name = Column(String(100), nullable=False)
-    last_name = Column(String(100), nullable=False)
-
-    username = Column(String(50), unique=True, nullable=False)
-    email = Column(String(100), unique=True, nullable=False)
-    phone = Column(String(30), nullable=True)
-
-    password_hash = Column(String(255), nullable=False)
-
-    role = Column(String(50), nullable=False, default="Technician")
-
-    is_active = Column(Boolean, default=True)
-
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(
+    created_at = Column(
         DateTime,
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow
+        default=lambda: datetime.now(UTC),
     )
 
-    company = relationship("Company", back_populates="users")
+    company = relationship(
+        "Company",
+        back_populates="users",
+    )
