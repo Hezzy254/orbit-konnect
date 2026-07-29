@@ -1,22 +1,40 @@
+from datetime import timedelta
+
 from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
+    """
+    Application settings loaded from .env
+    """
+
+    # Application
     APP_NAME: str = "Orbit Konnect"
     APP_VERSION: str = "0.1.0"
-
     DEBUG: bool = True
 
-    SECRET_KEY: str = "change-this-secret-key"
+    # Database
+    DATABASE_URL: str
 
-    DATABASE_URL: str = "sqlite:///orbit_konnect.db"
+    # Security
+    SECRET_KEY: str
+    ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
 
-    MIKROTIK_HOST: str = "192.168.88.1"
-    MIKROTIK_USERNAME: str = "admin"
-    MIKROTIK_PASSWORD: str = ""
+    # MikroTik
+    MIKROTIK_HOST: str
+    MIKROTIK_USERNAME: str
+    MIKROTIK_PASSWORD: str
+
+    @property
+    def ACCESS_TOKEN_EXPIRE(self) -> timedelta:
+        return timedelta(
+            minutes=self.ACCESS_TOKEN_EXPIRE_MINUTES
+        )
 
     class Config:
         env_file = ".env"
+        case_sensitive = True
 
 
 settings = Settings()

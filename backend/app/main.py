@@ -4,7 +4,7 @@ from backend.app.core.config import settings
 
 from backend.app.database.database import engine
 from backend.app.database.base import Base
-
+from backend.app.api.v1 import auth
 from backend.app.api.v1 import customers
 from backend.app.api.v1 import packages
 
@@ -24,3 +24,4 @@ def root():
 
 app.include_router(customers.router)
 app.include_router(packages.router)
+app.include_router(auth.router)
