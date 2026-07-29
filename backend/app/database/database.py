@@ -1,26 +1,23 @@
 from sqlalchemy import create_engine
-from sqlalchemy.orm import declarative_base
+from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.orm import sessionmaker
 
-DATABASE_URL = "sqlite:///./orbit_konnect.db"
+from backend.app.core.config import settings
+
+
+class Base(DeclarativeBase):
+    """Base class for all SQLAlchemy models."""
+    pass
+
 
 engine = create_engine(
-    DATABASE_URL,
-    connect_args={"check_same_thread": False}
+    settings.DATABASE_URL,
+    echo=settings.DEBUG,
 )
+
 
 SessionLocal = sessionmaker(
     autocommit=False,
     autoflush=False,
-    bind=engine
+    bind=engine,
 )
-
-Base = declarative_base()
-
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()

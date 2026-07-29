@@ -1,35 +1,86 @@
-from datetime import datetime
-from sqlalchemy.orm import relationship
+from datetime import datetime, UTC
 
-from sqlalchemy import Boolean, Column, DateTime, Integer, String
+from sqlalchemy import Boolean, DateTime, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.app.database.database import Base
+from backend.app.models.base_model import BaseModel
 
 
-class Company(Base):
+class Company(Base, BaseModel):
     __tablename__ = "companies"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
 
-    name = Column(String(100), nullable=False)
-    email = Column(String(100), unique=True, nullable=False)
-    phone = Column(String(30), nullable=True)
-    address = Column(String(255), nullable=True)
+    name: Mapped[str] = mapped_column(
+        String(100),
+        nullable=False,
+    )
 
-    logo = Column(String(255), nullable=True)
+    email: Mapped[str] = mapped_column(
+        String(100),
+        unique=True,
+        nullable=False,
+    )
 
-    country = Column(String(50), nullable=False, default="Oman")
-    currency = Column(String(10), nullable=False, default="OMR")
-    timezone = Column(String(50), nullable=False, default="Asia/Muscat")
+    phone: Mapped[str | None] = mapped_column(
+        String(30),
+        nullable=True,
+    )
 
-    subscription_plan = Column(String(30), nullable=False, default="Free")
+    address: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True,
+    )
 
-    is_active = Column(Boolean, default=True)
+    logo: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True,
+    )
 
-    created_at = Column(DateTime, default=datetime.utcnow)
-    
+    country: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+    )
+
+    currency: Mapped[str] = mapped_column(
+        String(10),
+        default="OMR",
+        nullable=False,
+    )
+
+    timezone: Mapped[str] = mapped_column(
+        String(50),
+        default="Asia/Muscat",
+        nullable=False,
+    )
+
+    subscription_plan: Mapped[str] = mapped_column(
+        String(30),
+        default="FREE",
+        nullable=False,
+    )
+
+    is_active: Mapped[bool] = mapped_column(
+        Boolean,
+        default=True,
+        nullable=False,
+    )
+
     users = relationship(
-    "User",
-    back_populates="company",
-    cascade="all, delete-orphan"
-)
+        "User",
+        back_populates="company",
+        cascade="all, delete-orphan",
+    )
+
+    customers = relationship(
+        "Customer",
+        back_populates="company",
+        cascade="all, delete-orphan",
+    )
+
+    packages = relationship(
+        "Package",
+        back_populates="company",
+        cascade="all, delete-orphan",
+    )

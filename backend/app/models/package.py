@@ -1,20 +1,65 @@
-from sqlalchemy import Column, Integer, String, Float
+from sqlalchemy import Boolean, Float, ForeignKey, Integer, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.app.database.database import Base
+from backend.app.models.base_model import BaseModel
 
 
-class Package(Base):
+class Package(Base, BaseModel):
     __tablename__ = "packages"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id: Mapped[int] = mapped_column(
+        primary_key=True,
+        index=True,
+    )
 
-    name = Column(String(100), nullable=False)
+    company_id: Mapped[int] = mapped_column(
+        ForeignKey("companies.id"),
+        nullable=False,
+    )
 
-    speed = Column(String(50), nullable=False)
+    name: Mapped[str] = mapped_column(
+        String(100),
+        nullable=False,
+    )
 
-    duration = Column(String(50), nullable=False)
+    download_speed_mbps: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+    )
 
-    price = Column(Float, nullable=False)
+    upload_speed_mbps: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+    )
 
-    description = Column(String(255), nullable=True)
-    
+    duration_days: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+    )
+
+    price: Mapped[float] = mapped_column(
+        Float,
+        nullable=False,
+    )
+
+    description: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True,
+    )
+
+    is_active: Mapped[bool] = mapped_column(
+        Boolean,
+        default=True,
+        nullable=False,
+    )
+
+    company = relationship(
+        "Company",
+        back_populates="packages",
+    )
+
+    customers = relationship(
+        "Customer",
+        back_populates="package",
+    )

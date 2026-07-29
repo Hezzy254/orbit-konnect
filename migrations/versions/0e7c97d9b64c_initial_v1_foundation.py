@@ -1,8 +1,8 @@
-"""Initial database
+"""Initial V1 Foundation
 
-Revision ID: 9c6bf50e72cc
+Revision ID: 0e7c97d9b64c
 Revises: 
-Create Date: 2026-07-28 01:56:15.347688
+Create Date: 2026-07-30 03:18:14.150892
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '9c6bf50e72cc'
+revision: str = '0e7c97d9b64c'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -32,65 +32,72 @@ def upgrade() -> None:
     sa.Column('currency', sa.String(length=10), nullable=False),
     sa.Column('timezone', sa.String(length=50), nullable=False),
     sa.Column('subscription_plan', sa.String(length=30), nullable=False),
-    sa.Column('is_active', sa.Boolean(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.Column('is_active', sa.Boolean(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('updated_at', sa.DateTime(), nullable=False),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('email')
     )
     op.create_index(op.f('ix_companies_id'), 'companies', ['id'], unique=False)
-    op.create_table('customers',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('full_name', sa.String(length=100), nullable=False),
-    sa.Column('phone', sa.String(length=30), nullable=True),
-    sa.Column('email', sa.String(length=100), nullable=True),
-    sa.Column('address', sa.String(length=255), nullable=True),
-    sa.Column('status', sa.String(length=20), nullable=True),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('email'),
-    sa.UniqueConstraint('phone')
-    )
-    op.create_index(op.f('ix_customers_id'), 'customers', ['id'], unique=False)
     op.create_table('packages',
     sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('company_id', sa.Integer(), nullable=False),
     sa.Column('name', sa.String(length=100), nullable=False),
-    sa.Column('speed', sa.String(length=50), nullable=False),
-    sa.Column('duration', sa.String(length=50), nullable=False),
+    sa.Column('download_speed_mbps', sa.Integer(), nullable=False),
+    sa.Column('upload_speed_mbps', sa.Integer(), nullable=False),
+    sa.Column('duration_days', sa.Integer(), nullable=False),
     sa.Column('price', sa.Float(), nullable=False),
     sa.Column('description', sa.String(length=255), nullable=True),
+    sa.Column('is_active', sa.Boolean(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('updated_at', sa.DateTime(), nullable=False),
+    sa.ForeignKeyConstraint(['company_id'], ['companies.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_packages_id'), 'packages', ['id'], unique=False)
     op.create_table('users',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('company_id', sa.Integer(), nullable=False),
-    sa.Column('first_name', sa.String(length=100), nullable=False),
-    sa.Column('last_name', sa.String(length=100), nullable=False),
-    sa.Column('username', sa.String(length=50), nullable=False),
+    sa.Column('full_name', sa.String(length=100), nullable=False),
     sa.Column('email', sa.String(length=100), nullable=False),
-    sa.Column('phone', sa.String(length=30), nullable=True),
-    sa.Column('password_hash', sa.String(length=255), nullable=False),
-    sa.Column('role', sa.String(length=50), nullable=False),
-    sa.Column('is_active', sa.Boolean(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=True),
-    sa.Column('updated_at', sa.DateTime(), nullable=True),
+    sa.Column('hashed_password', sa.String(length=255), nullable=False),
+    sa.Column('role', sa.String(length=30), nullable=False),
+    sa.Column('is_active', sa.Boolean(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('updated_at', sa.DateTime(), nullable=False),
     sa.ForeignKeyConstraint(['company_id'], ['companies.id'], ),
     sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('email'),
-    sa.UniqueConstraint('username')
+    sa.UniqueConstraint('email')
     )
     op.create_index(op.f('ix_users_id'), 'users', ['id'], unique=False)
+    op.create_table('customers',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('company_id', sa.Integer(), nullable=False),
+    sa.Column('package_id', sa.Integer(), nullable=False),
+    sa.Column('full_name', sa.String(length=100), nullable=False),
+    sa.Column('phone', sa.String(length=30), nullable=False),
+    sa.Column('email', sa.String(length=100), nullable=True),
+    sa.Column('address', sa.String(length=255), nullable=True),
+    sa.Column('is_active', sa.Boolean(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('updated_at', sa.DateTime(), nullable=False),
+    sa.ForeignKeyConstraint(['company_id'], ['companies.id'], ),
+    sa.ForeignKeyConstraint(['package_id'], ['packages.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_customers_id'), 'customers', ['id'], unique=False)
     # ### end Alembic commands ###
 
 
 def downgrade() -> None:
     """Downgrade schema."""
     # ### commands auto generated by Alembic - please adjust! ###
+    op.drop_index(op.f('ix_customers_id'), table_name='customers')
+    op.drop_table('customers')
     op.drop_index(op.f('ix_users_id'), table_name='users')
     op.drop_table('users')
     op.drop_index(op.f('ix_packages_id'), table_name='packages')
     op.drop_table('packages')
-    op.drop_index(op.f('ix_customers_id'), table_name='customers')
-    op.drop_table('customers')
     op.drop_index(op.f('ix_companies_id'), table_name='companies')
     op.drop_table('companies')
     # ### end Alembic commands ###
