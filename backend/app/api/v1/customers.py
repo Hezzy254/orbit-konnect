@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from backend.app.database.database import get_db
+from backend.app.dependencies.database import get_db
 from backend.app.schemas.customer import CustomerCreate
 from backend.app.services.customer_service import CustomerService
 

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from backend.app.database.database import get_db
+from backend.app.dependencies.database import get_db
 from backend.app.models.package import Package
 from backend.app.schemas.package import PackageCreate
 

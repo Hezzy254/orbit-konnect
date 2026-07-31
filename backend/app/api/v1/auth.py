@@ -1,20 +1,22 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from backend.app.core.auth import create_access_token
-from backend.app.crud.user import (
-    authenticate_user,
-    create_user,
-    get_user_by_email,
-    get_user_by_username,
+from backend.app.dependencies.auth import get_current_user
+from backend.app.dependencies.database import get_db
+from backend.app.models.user import User
+from backend.app.repositories.user_repository import UserRepository
+from backend.app.schemas.auth import (
+    CurrentUserResponse,
+    LoginRequest,
+    RefreshTokenRequest,
+    TokenResponse,
 )
-from backend.app.database.dependencies import get_db
-from backend.app.schemas.user import (
-    Token,
-    UserCreate,
-    UserLogin,
-    UserResponse,
+from backend.app.security.jwt import (
+    create_access_token,
+    create_refresh_token,
+    decode_token,
 )
+from backend.app.services.auth_service import AuthService
 
 router = APIRouter(
     prefix="/auth",
@@ -22,74 +24,83 @@ router = APIRouter(
 )
 
 
-@router.get("/test")
-def test_auth():
-    return {
-        "message": "Authentication API is working!"
-    }
-
-
-@router.post(
-    "/register",
-    response_model=UserResponse,
-    status_code=status.HTTP_201_CREATED,
-)
-def register(
-    user: UserCreate,
-    db: Session = Depends(get_db),
-):
-    """
-    Register a new user.
-    """
-
-    if get_user_by_username(db, user.username):
-        raise HTTPException(
-            status_code=400,
-            detail="Username already exists.",
-        )
-
-    if get_user_by_email(db, user.email):
-        raise HTTPException(
-            status_code=400,
-            detail="Email already exists.",
-        )
-
-    return create_user(db, user)
-
-
 @router.post(
     "/login",
-    response_model=Token,
+    response_model=TokenResponse,
 )
 def login(
-    credentials: UserLogin,
+    request: LoginRequest,
     db: Session = Depends(get_db),
 ):
     """
-    Authenticate user and return JWT token.
+    Authenticate a user and return access and refresh tokens.
     """
 
-    user = authenticate_user(
-        db,
-        credentials.username,
-        credentials.password,
+    repository = UserRepository(db)
+    service = AuthService(repository)
+
+    result = service.login(
+        request.email,
+        request.password,
     )
 
-    if not user:
+    if result is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid username or password.",
+            detail="Invalid email or password.",
         )
 
-    token = create_access_token(
-        {
-            "sub": user.username,
-            "role": user.role,
-            "company_id": user.company_id,
-        }
+    return TokenResponse(**result)
+
+
+@router.post(
+    "/refresh",
+    response_model=TokenResponse,
+)
+def refresh_token(
+    request: RefreshTokenRequest,
+):
+    """
+    Generate a new access token using a refresh token.
+    """
+
+    payload = decode_token(request.refresh_token)
+
+    if not payload:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid refresh token.",
+        )
+
+    if payload.get("type") != "refresh":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token type.",
+        )
+
+    user = User(
+        email=payload["sub"],
+        company_id=payload["company_id"],
+        role=payload["role"],
     )
 
-    return {
-        "access_token": token,
-        "token_type": "bearer",
-    }
+    return TokenResponse(
+        access_token=create_access_token(user),
+        refresh_token=create_refresh_token(user),
+        token_type="bearer",
+        expires_in=3600,
+    )
+
+
+@router.get(
+    "/me",
+    response_model=CurrentUserResponse,
+)
+def get_me(
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Return the currently authenticated user.
+    """
+
+    return current_user

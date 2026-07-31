@@ -1,4 +1,6 @@
-from sqlalchemy import ForeignKey, String
+from datetime import datetime
+
+from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.app.database.database import Base
@@ -10,6 +12,7 @@ class User(Base, BaseModel):
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(
+        Integer,
         primary_key=True,
         index=True,
     )
@@ -20,13 +23,14 @@ class User(Base, BaseModel):
     )
 
     full_name: Mapped[str] = mapped_column(
-        String(100),
+        String(255),
         nullable=False,
     )
 
     email: Mapped[str] = mapped_column(
-        String(100),
+        String(255),
         unique=True,
+        index=True,
         nullable=False,
     )
 
@@ -35,15 +39,20 @@ class User(Base, BaseModel):
         nullable=False,
     )
 
-    role: Mapped[str] = mapped_column(
-        String(30),
-        default=UserRole.TECHNICIAN.value,
+    role: Mapped[UserRole] = mapped_column(
+        Enum(UserRole),
         nullable=False,
     )
 
     is_active: Mapped[bool] = mapped_column(
+        Boolean,
         default=True,
         nullable=False,
+    )
+
+    last_login: Mapped[datetime | None] = mapped_column(
+        DateTime,
+        nullable=True,
     )
 
     company = relationship(
