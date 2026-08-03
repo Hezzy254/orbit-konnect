@@ -3,12 +3,16 @@ from sqlalchemy.orm import Session
 
 from backend.app.dependencies.auth import get_current_user
 from backend.app.dependencies.database import get_db
+from backend.app.models.roles import UserRole
 from backend.app.models.user import User
+from backend.app.repositories.company_repository import CompanyRepository
 from backend.app.repositories.user_repository import UserRepository
 from backend.app.schemas.auth import (
     CurrentUserResponse,
     LoginRequest,
     RefreshTokenRequest,
+    RegisterRequest,
+    RegisterResponse,
     TokenResponse,
 )
 from backend.app.security.jwt import (
@@ -24,6 +28,43 @@ router = APIRouter(
 )
 
 
+# ==========================================================
+# REGISTER
+# ==========================================================
+
+@router.post(
+    "/register",
+    response_model=RegisterResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def register(
+    request: RegisterRequest,
+    db: Session = Depends(get_db),
+):
+    """
+    Register a new company and its owner.
+    """
+
+    auth_service = AuthService(
+        user_repository=UserRepository(db),
+        company_repository=CompanyRepository(db),
+    )
+
+    try:
+        result = auth_service.register(request)
+        return RegisterResponse(**result)
+
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        )
+
+
+# ==========================================================
+# LOGIN
+# ==========================================================
+
 @router.post(
     "/login",
     response_model=TokenResponse,
@@ -33,15 +74,17 @@ def login(
     db: Session = Depends(get_db),
 ):
     """
-    Authenticate a user and return access and refresh tokens.
+    Authenticate a user.
     """
 
-    repository = UserRepository(db)
-    service = AuthService(repository)
+    auth_service = AuthService(
+        user_repository=UserRepository(db),
+        company_repository=CompanyRepository(db),
+    )
 
-    result = service.login(
-        request.email,
-        request.password,
+    result = auth_service.login(
+        email=request.email,
+        password=request.password,
     )
 
     if result is None:
@@ -50,8 +93,17 @@ def login(
             detail="Invalid email or password.",
         )
 
-    return TokenResponse(**result)
+    return TokenResponse(
+        access_token=result["access_token"],
+        refresh_token=result["refresh_token"],
+        token_type=result["token_type"],
+        expires_in=result["expires_in"],
+    )
 
+
+# ==========================================================
+# REFRESH TOKEN
+# ==========================================================
 
 @router.post(
     "/refresh",
@@ -79,9 +131,12 @@ def refresh_token(
         )
 
     user = User(
-        email=payload["sub"],
         company_id=payload["company_id"],
-        role=payload["role"],
+        full_name="",
+        email=payload["sub"],
+        hashed_password="",
+        role=UserRole(payload["role"]),
+        is_active=True,
     )
 
     return TokenResponse(
@@ -91,6 +146,10 @@ def refresh_token(
         expires_in=3600,
     )
 
+
+# ==========================================================
+# CURRENT USER
+# ==========================================================
 
 @router.get(
     "/me",
@@ -103,4 +162,4 @@ def get_me(
     Return the currently authenticated user.
     """
 
-    return current_user
+    return CurrentUserResponse.model_validate(current_user)
