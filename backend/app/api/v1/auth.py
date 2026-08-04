@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
 from backend.app.dependencies.auth import get_current_user
@@ -27,7 +28,6 @@ router = APIRouter(
     tags=["Authentication"],
 )
 
-
 # ==========================================================
 # REGISTER
 # ==========================================================
@@ -41,10 +41,6 @@ def register(
     request: RegisterRequest,
     db: Session = Depends(get_db),
 ):
-    """
-    Register a new company and its owner.
-    """
-
     auth_service = AuthService(
         user_repository=UserRepository(db),
         company_repository=CompanyRepository(db),
@@ -62,7 +58,7 @@ def register(
 
 
 # ==========================================================
-# LOGIN
+# LOGIN (JSON - React / Flutter)
 # ==========================================================
 
 @router.post(
@@ -73,10 +69,6 @@ def login(
     request: LoginRequest,
     db: Session = Depends(get_db),
 ):
-    """
-    Authenticate a user.
-    """
-
     auth_service = AuthService(
         user_repository=UserRepository(db),
         company_repository=CompanyRepository(db),
@@ -93,16 +85,43 @@ def login(
             detail="Invalid email or password.",
         )
 
-    return TokenResponse(
-        access_token=result["access_token"],
-        refresh_token=result["refresh_token"],
-        token_type=result["token_type"],
-        expires_in=result["expires_in"],
-    )
+    return TokenResponse(**result)
 
 
 # ==========================================================
-# REFRESH TOKEN
+# TOKEN (Swagger OAuth2)
+# ==========================================================
+
+@router.post(
+    "/token",
+    response_model=TokenResponse,
+    include_in_schema=False,
+)
+def token(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: Session = Depends(get_db),
+):
+    auth_service = AuthService(
+        user_repository=UserRepository(db),
+        company_repository=CompanyRepository(db),
+    )
+
+    result = auth_service.login(
+        email=form_data.username,
+        password=form_data.password,
+    )
+
+    if result is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid email or password.",
+        )
+
+    return TokenResponse(**result)
+
+
+# ==========================================================
+# REFRESH
 # ==========================================================
 
 @router.post(
@@ -112,10 +131,6 @@ def login(
 def refresh_token(
     request: RefreshTokenRequest,
 ):
-    """
-    Generate a new access token using a refresh token.
-    """
-
     payload = decode_token(request.refresh_token)
 
     if not payload:
@@ -158,8 +173,4 @@ def refresh_token(
 def get_me(
     current_user: User = Depends(get_current_user),
 ):
-    """
-    Return the currently authenticated user.
-    """
-
     return CurrentUserResponse.model_validate(current_user)

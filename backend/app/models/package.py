@@ -58,8 +58,3 @@ class Package(Base, BaseModel):
         "Company",
         back_populates="packages",
     )
-
-    customers = relationship(
-        "Customer",
-        back_populates="package",
-    )

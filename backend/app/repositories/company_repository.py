@@ -40,6 +40,16 @@ class CompanyRepository:
             .first()
         )
 
+    def get_by_name(self, name: str) -> Company | None:
+        """
+        Get company by name.
+        """
+        return (
+            self.db.query(Company)
+            .filter(Company.name == name)
+            .first()
+        )
+
     def update(self, company: Company) -> Company:
         """
         Save changes to an existing company.

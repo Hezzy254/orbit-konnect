@@ -16,30 +16,33 @@ class Customer(Base, BaseModel):
     company_id: Mapped[int] = mapped_column(
         ForeignKey("companies.id"),
         nullable=False,
-    )
-
-    package_id: Mapped[int] = mapped_column(
-        ForeignKey("packages.id"),
-        nullable=False,
+        index=True,
     )
 
     full_name: Mapped[str] = mapped_column(
-        String(100),
+        String(150),
         nullable=False,
     )
 
     phone: Mapped[str] = mapped_column(
         String(30),
         nullable=False,
+        index=True,
     )
 
     email: Mapped[str | None] = mapped_column(
-        String(100),
+        String(255),
         nullable=True,
+        unique=True,
     )
 
     address: Mapped[str | None] = mapped_column(
         String(255),
+        nullable=True,
+    )
+
+    national_id: Mapped[str | None] = mapped_column(
+        String(50),
         nullable=True,
     )
 
@@ -51,10 +54,5 @@ class Customer(Base, BaseModel):
 
     company = relationship(
         "Company",
-        back_populates="customers",
-    )
-
-    package = relationship(
-        "Package",
         back_populates="customers",
     )
