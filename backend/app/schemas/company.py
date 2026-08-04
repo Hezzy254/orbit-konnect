@@ -1,23 +1,26 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
-class CompanyCreate(BaseModel):
+class CompanyResponse(BaseModel):
+    id: int
     name: str
     email: EmailStr
     phone: str | None = None
     address: str | None = None
     logo: str | None = None
-
-    country: str = "Oman"
-    currency: str = "OMR"
-    timezone: str = "Asia/Muscat"
-
-    subscription_plan: str = "Free"
-
-
-class CompanyResponse(CompanyCreate):
-    id: int
+    country: str
+    currency: str
+    timezone: str
+    subscription_plan: str
     is_active: bool
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
+
+
+class CompanyUpdateRequest(BaseModel):
+    name: str = Field(min_length=2, max_length=100)
+    phone: str | None = Field(default=None, max_length=30)
+    address: str | None = Field(default=None, max_length=255)
+    country: str = Field(min_length=2, max_length=50)
+    currency: str = Field(min_length=3, max_length=10)
+    timezone: str = Field(min_length=3, max_length=50)
