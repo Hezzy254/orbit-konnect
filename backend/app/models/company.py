@@ -1,6 +1,4 @@
-from datetime import datetime, UTC
-
-from sqlalchemy import Boolean, DateTime, String
+from sqlalchemy import Boolean, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.app.database.database import Base
@@ -10,7 +8,10 @@ from backend.app.models.base_model import BaseModel
 class Company(Base, BaseModel):
     __tablename__ = "companies"
 
-    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    id: Mapped[int] = mapped_column(
+        primary_key=True,
+        index=True,
+    )
 
     name: Mapped[str] = mapped_column(
         String(100),

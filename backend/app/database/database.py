@@ -1,12 +1,14 @@
 from sqlalchemy import create_engine
-from sqlalchemy.orm import DeclarativeBase
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
 from backend.app.core.config import settings
 
 
 class Base(DeclarativeBase):
-    """Base class for all SQLAlchemy models."""
+    """
+    Base class for all SQLAlchemy models.
+    """
+
     pass
 
 

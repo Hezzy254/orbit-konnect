@@ -1,4 +1,9 @@
-from sqlalchemy import Boolean, ForeignKey, String
+from sqlalchemy import (
+    Boolean,
+    ForeignKey,
+    String,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.app.database.database import Base
@@ -7,6 +12,19 @@ from backend.app.models.base_model import BaseModel
 
 class Customer(Base, BaseModel):
     __tablename__ = "customers"
+
+    __table_args__ = (
+        UniqueConstraint(
+            "company_id",
+            "email",
+            name="uq_customer_company_email",
+        ),
+        UniqueConstraint(
+            "company_id",
+            "phone",
+            name="uq_customer_company_phone",
+        ),
+    )
 
     id: Mapped[int] = mapped_column(
         primary_key=True,
@@ -33,7 +51,6 @@ class Customer(Base, BaseModel):
     email: Mapped[str | None] = mapped_column(
         String(255),
         nullable=True,
-        unique=True,
     )
 
     address: Mapped[str | None] = mapped_column(
