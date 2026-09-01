@@ -1,13 +1,17 @@
 from sqlalchemy.exc import IntegrityError
 
 from backend.app.exceptions.customer import (
+    CustomerNotFoundError,
     DuplicateCustomerEmailError,
     DuplicateCustomerPhoneError,
-    CustomerNotFoundError,
 )
 from backend.app.models.customer import Customer
 from backend.app.repositories.customer_repository import CustomerRepository
 from backend.app.schemas.customer import CustomerCreate, CustomerUpdate
+
+
+CUSTOMER_PHONE_CONSTRAINT = "uq_customer_company_phone"
+CUSTOMER_EMAIL_CONSTRAINT = "uq_customer_company_email"
 
 
 class CustomerService:
@@ -17,6 +21,134 @@ class CustomerService:
 
     def __init__(self, repository: CustomerRepository):
         self.repository = repository
+
+    # ==========================================================
+    # NORMALIZATION HELPERS
+    # ==========================================================
+
+    @staticmethod
+    def _normalize_phone(phone: str) -> str:
+        """
+        Normalize a phone number at the Customer service boundary.
+
+        At this stage we intentionally only remove surrounding
+        whitespace. International phone-number canonicalization
+        such as E.164 will be introduced as a separate,
+        deliberate policy later.
+        """
+
+        return phone.strip()
+
+    @staticmethod
+    def _normalize_email(email: str | None) -> str | None:
+        """
+        Normalize email addresses.
+
+        Email comparison is performed case-insensitively by
+        storing the normalized lowercase representation.
+        """
+
+        if email is None:
+            return None
+
+        normalized = str(email).strip().lower()
+
+        return normalized or None
+
+    @staticmethod
+    def _normalize_optional_text(value: str | None) -> str | None:
+        """
+        Normalize optional text fields.
+
+        Empty strings become None so the database does not
+        receive meaningless whitespace-only values.
+        """
+
+        if value is None:
+            return None
+
+        normalized = value.strip()
+
+        return normalized or None
+
+    @staticmethod
+    def _raise_duplicate_from_integrity_error(
+        exc: IntegrityError,
+    ) -> None:
+        """
+        Convert a database uniqueness violation into the
+        appropriate domain exception.
+
+        PostgreSQL exposes the violated constraint through
+        the database driver's diagnostic information.
+
+        A message-based fallback is retained for SQLite
+        development environments.
+        """
+
+        original_error = getattr(exc, "orig", None)
+
+        # ------------------------------------------------------
+        # PostgreSQL / drivers exposing constraint metadata
+        # ------------------------------------------------------
+
+        diagnostic = getattr(
+            original_error,
+            "diag",
+            None,
+        )
+
+        constraint_name = getattr(
+            diagnostic,
+            "constraint_name",
+            None,
+        )
+
+        if constraint_name == CUSTOMER_PHONE_CONSTRAINT:
+            raise DuplicateCustomerPhoneError(
+                "A customer with this phone number already exists."
+            ) from exc
+
+        if constraint_name == CUSTOMER_EMAIL_CONSTRAINT:
+            raise DuplicateCustomerEmailError(
+                "A customer with this email already exists."
+            ) from exc
+
+        # ------------------------------------------------------
+        # SQLite development fallback
+        # ------------------------------------------------------
+
+        message = str(original_error or exc).lower()
+
+        if (
+            CUSTOMER_PHONE_CONSTRAINT.lower() in message
+            or (
+                "unique constraint failed" in message
+                and "customers.company_id" in message
+                and "customers.phone" in message
+            )
+        ):
+            raise DuplicateCustomerPhoneError(
+                "A customer with this phone number already exists."
+            ) from exc
+
+        if (
+            CUSTOMER_EMAIL_CONSTRAINT.lower() in message
+            or (
+                "unique constraint failed" in message
+                and "customers.company_id" in message
+                and "customers.email" in message
+            )
+        ):
+            raise DuplicateCustomerEmailError(
+                "A customer with this email already exists."
+            ) from exc
+
+        # ------------------------------------------------------
+        # Unknown integrity error
+        # ------------------------------------------------------
+
+        raise exc
 
     # ==========================================================
     # CREATE CUSTOMER
@@ -30,19 +162,33 @@ class CustomerService:
         """
         Create a customer for the authenticated company.
 
-        Duplicate checks are performed before insertion.
-        Database constraints provide the final protection
+        Duplicate checks provide fast and user-friendly
+        validation.
+
+        Database constraints remain the final protection
         against concurrent duplicate requests.
         """
 
-        # ------------------------------------------------------
-        # Normalize phone
-        # ------------------------------------------------------
+        phone = self._normalize_phone(
+            data.phone,
+        )
 
-        phone = data.phone.strip()
+        email = self._normalize_email(
+            data.email,
+        )
+
+        address = self._normalize_optional_text(
+            data.address,
+        )
+
+        national_id = self._normalize_optional_text(
+            data.national_id,
+        )
+
+        full_name = data.full_name.strip()
 
         # ------------------------------------------------------
-        # Check duplicate phone
+        # Duplicate phone check
         # ------------------------------------------------------
 
         existing_phone = self.repository.get_by_phone(
@@ -50,53 +196,37 @@ class CustomerService:
             company_id=company_id,
         )
 
-        if existing_phone:
+        if existing_phone is not None:
             raise DuplicateCustomerPhoneError(
                 "A customer with this phone number already exists."
             )
 
         # ------------------------------------------------------
-        # Normalize email
+        # Duplicate email check
         # ------------------------------------------------------
 
-        email = None
-
-        if data.email is not None:
-            email = str(data.email).strip().lower()
-
-            # --------------------------------------------------
-            # Check duplicate email
-            # --------------------------------------------------
-
+        if email is not None:
             existing_email = self.repository.get_by_email(
                 email=email,
                 company_id=company_id,
             )
 
-            if existing_email:
+            if existing_email is not None:
                 raise DuplicateCustomerEmailError(
                     "A customer with this email already exists."
                 )
 
         # ------------------------------------------------------
-        # Create customer object
+        # Create customer
         # ------------------------------------------------------
 
         customer = Customer(
             company_id=company_id,
-            full_name=data.full_name.strip(),
+            full_name=full_name,
             phone=phone,
             email=email,
-            address=(
-                data.address.strip()
-                if data.address
-                else None
-            ),
-            national_id=(
-                data.national_id.strip()
-                if data.national_id
-                else None
-            ),
+            address=address,
+            national_id=national_id,
             is_active=True,
         )
 
@@ -108,25 +238,7 @@ class CustomerService:
             return self.repository.create(customer)
 
         except IntegrityError as exc:
-            message = str(exc).lower()
-
-            if (
-                "phone" in message
-                and "company_id" in message
-            ):
-                raise DuplicateCustomerPhoneError(
-                    "A customer with this phone number already exists."
-                ) from exc
-
-            if (
-                "email" in message
-                and "company_id" in message
-            ):
-                raise DuplicateCustomerEmailError(
-                    "A customer with this email already exists."
-                ) from exc
-
-            raise
+            self._raise_duplicate_from_integrity_error(exc)
 
     # ==========================================================
     # GET CUSTOMER
@@ -195,7 +307,11 @@ class CustomerService:
         data: CustomerUpdate,
     ) -> Customer:
         """
-        Update a customer belonging to the authenticated company.
+        Update customer profile information.
+
+        Customer activation state is intentionally handled
+        separately through activate_customer() and
+        deactivate_customer().
         """
 
         customer = self.get_customer(
@@ -208,7 +324,7 @@ class CustomerService:
         )
 
         # ------------------------------------------------------
-        # Normalize full name
+        # Normalize fields
         # ------------------------------------------------------
 
         if "full_name" in update_data:
@@ -216,49 +332,36 @@ class CustomerService:
                 update_data["full_name"].strip()
             )
 
-        # ------------------------------------------------------
-        # Normalize phone
-        # ------------------------------------------------------
-
         if "phone" in update_data:
             update_data["phone"] = (
-                update_data["phone"].strip()
+                self._normalize_phone(
+                    update_data["phone"],
+                )
+            )
+
+        if "email" in update_data:
+            update_data["email"] = (
+                self._normalize_email(
+                    update_data["email"],
+                )
+            )
+
+        if "address" in update_data:
+            update_data["address"] = (
+                self._normalize_optional_text(
+                    update_data["address"],
+                )
+            )
+
+        if "national_id" in update_data:
+            update_data["national_id"] = (
+                self._normalize_optional_text(
+                    update_data["national_id"],
+                )
             )
 
         # ------------------------------------------------------
-        # Normalize email
-        # ------------------------------------------------------
-
-        if "email" in update_data:
-            if update_data["email"] is not None:
-                update_data["email"] = (
-                    str(update_data["email"])
-                    .strip()
-                    .lower()
-                )
-
-        # ------------------------------------------------------
-        # Normalize address
-        # ------------------------------------------------------
-
-        if "address" in update_data:
-            if update_data["address"] is not None:
-                update_data["address"] = (
-                    update_data["address"].strip()
-                )
-
-        # ------------------------------------------------------
-        # Normalize national ID
-        # ------------------------------------------------------
-
-        if "national_id" in update_data:
-            if update_data["national_id"] is not None:
-                update_data["national_id"] = (
-                    update_data["national_id"].strip()
-                )
-
-        # ------------------------------------------------------
-        # Check duplicate phone
+        # Duplicate phone check
         # ------------------------------------------------------
 
         new_phone = update_data.get("phone")
@@ -281,7 +384,7 @@ class CustomerService:
                 )
 
         # ------------------------------------------------------
-        # Check duplicate email
+        # Duplicate email check
         # ------------------------------------------------------
 
         new_email = update_data.get("email")
@@ -308,7 +411,11 @@ class CustomerService:
         # ------------------------------------------------------
 
         for field, value in update_data.items():
-            setattr(customer, field, value)
+            setattr(
+                customer,
+                field,
+                value,
+            )
 
         # ------------------------------------------------------
         # Database-level protection
@@ -318,25 +425,7 @@ class CustomerService:
             return self.repository.update(customer)
 
         except IntegrityError as exc:
-            message = str(exc).lower()
-
-            if (
-                "phone" in message
-                and "company_id" in message
-            ):
-                raise DuplicateCustomerPhoneError(
-                    "A customer with this phone number already exists."
-                ) from exc
-
-            if (
-                "email" in message
-                and "company_id" in message
-            ):
-                raise DuplicateCustomerEmailError(
-                    "A customer with this email already exists."
-                ) from exc
-
-            raise
+            self._raise_duplicate_from_integrity_error(exc)
 
     # ==========================================================
     # DEACTIVATE CUSTOMER

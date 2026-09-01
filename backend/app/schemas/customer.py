@@ -4,7 +4,15 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field
 class CustomerBase(BaseModel):
     """
     Shared customer fields.
+
+    Request data is normalized by stripping surrounding
+    whitespace and unexpected fields are rejected.
     """
+
+    model_config = ConfigDict(
+        str_strip_whitespace=True,
+        extra="forbid",
+    )
 
     full_name: str = Field(
         ...,
@@ -41,11 +49,19 @@ class CustomerCreate(CustomerBase):
 
 class CustomerUpdate(BaseModel):
     """
-    Fields that can be updated.
+    Fields that can be updated on a customer profile.
 
-    All fields are optional because this endpoint supports
-    partial updates.
+    Customer activation state is intentionally excluded.
+    Activation and deactivation are handled by dedicated
+    lifecycle endpoints.
+
+    Unexpected fields are rejected instead of silently ignored.
     """
+
+    model_config = ConfigDict(
+        str_strip_whitespace=True,
+        extra="forbid",
+    )
 
     full_name: str | None = Field(
         default=None,
@@ -70,8 +86,6 @@ class CustomerUpdate(BaseModel):
         default=None,
         max_length=50,
     )
-
-    is_active: bool | None = None
 
 
 class CustomerResponse(CustomerBase):
