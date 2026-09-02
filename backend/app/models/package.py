@@ -1,12 +1,43 @@
-from sqlalchemy import Boolean, Float, ForeignKey, Integer, String
+from decimal import Decimal
+from enum import Enum
+
+from sqlalchemy import (
+    Boolean,
+    Enum as SQLEnum,
+    ForeignKey,
+    Integer,
+    Numeric,
+    String,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.app.database.database import Base
 from backend.app.models.base_model import BaseModel
 
 
+class PackageDurationUnit(str, Enum):
+    """
+    Supported package duration units.
+    """
+
+    MINUTE = "MINUTE"
+    HOUR = "HOUR"
+    DAY = "DAY"
+    WEEK = "WEEK"
+    MONTH = "MONTH"
+
+
 class Package(Base, BaseModel):
     __tablename__ = "packages"
+
+    __table_args__ = (
+        UniqueConstraint(
+            "company_id",
+            "name",
+            name="uq_package_company_name",
+        ),
+    )
 
     id: Mapped[int] = mapped_column(
         primary_key=True,
@@ -16,6 +47,7 @@ class Package(Base, BaseModel):
     company_id: Mapped[int] = mapped_column(
         ForeignKey("companies.id"),
         nullable=False,
+        index=True,
     )
 
     name: Mapped[str] = mapped_column(
@@ -33,13 +65,18 @@ class Package(Base, BaseModel):
         nullable=False,
     )
 
-    duration_days: Mapped[int] = mapped_column(
+    duration_value: Mapped[int] = mapped_column(
         Integer,
         nullable=False,
     )
 
-    price: Mapped[float] = mapped_column(
-        Float,
+    duration_unit: Mapped[PackageDurationUnit] = mapped_column(
+        SQLEnum(PackageDurationUnit),
+        nullable=False,
+    )
+
+    price: Mapped[Decimal] = mapped_column(
+        Numeric(12, 3),
         nullable=False,
     )
 

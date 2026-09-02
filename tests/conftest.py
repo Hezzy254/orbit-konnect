@@ -14,15 +14,7 @@ from backend.app.database.database import Base
 from backend.app.models.company import Company
 from backend.app.models.customer import Customer
 from backend.app.models.user import User  # noqa: F401
-
-
-# The Company model declares a relationship to Package. The application
-# normally imports the package model through the API/model graph. Import it
-# here when available so SQLAlchemy can resolve that relationship in tests.
-try:
-    from backend.app.models.package import Package  # noqa: F401
-except ImportError:
-    Package = None
+from backend.app.models.package import Package
 
 
 @dataclass
@@ -30,8 +22,8 @@ class TestUser:
     """
     Minimal authenticated identity for API tests.
 
-    Customer endpoints only require company_id from the authenticated user.
-    Authentication/JWT behavior belongs to the authentication test suite.
+    API endpoints use company_id from the authenticated user
+    to enforce tenant/company isolation.
     """
 
     company_id: int = 1
@@ -58,7 +50,10 @@ def db_engine():
     )
 
     @event.listens_for(engine, "connect")
-    def enable_sqlite_foreign_keys(dbapi_connection, connection_record):
+    def enable_sqlite_foreign_keys(
+        dbapi_connection,
+        connection_record,
+    ):
         cursor = dbapi_connection.cursor()
         cursor.execute("PRAGMA foreign_keys=ON")
         cursor.close()
@@ -68,6 +63,7 @@ def db_engine():
         tables=[
             Company.__table__,
             Customer.__table__,
+            Package.__table__,
         ],
     )
 
@@ -76,10 +72,12 @@ def db_engine():
     Base.metadata.drop_all(
         bind=engine,
         tables=[
+            Package.__table__,
             Customer.__table__,
             Company.__table__,
         ],
     )
+
     engine.dispose()
 
 
@@ -125,6 +123,7 @@ def db(db_engine) -> Session:
             },
         ],
     )
+
     session.commit()
 
     try:
@@ -134,11 +133,15 @@ def db(db_engine) -> Session:
 
 
 @pytest.fixture
-def client(db: Session, current_user: TestUser):
+def client(
+    db: Session,
+    current_user: TestUser,
+):
     """
-    FastAPI TestClient with Customer's real database dependency replaced
-    by the disposable test database and JWT authentication replaced by a
-    controlled authenticated identity.
+    FastAPI TestClient with application dependencies overridden.
+
+    Database access uses the disposable test database.
+    Authentication uses a controlled authenticated test identity.
     """
 
     def override_get_db():
@@ -166,7 +169,9 @@ def customer_payload():
             "address": "Muscat",
             "national_id": "TEST001",
         }
+
         payload.update(overrides)
+
         return payload
 
     return _payload
@@ -191,11 +196,13 @@ def create_customer(db: Session):
             "national_id": "EXIST001",
             "is_active": True,
         }
+
         values.update(overrides)
 
         result = db.execute(
             Customer.__table__.insert().values(**values)
         )
+
         db.commit()
 
         customer_id = result.inserted_primary_key[0]

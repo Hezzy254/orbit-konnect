@@ -3,6 +3,7 @@ from fastapi import APIRouter
 from backend.app.api.v1 import auth
 from backend.app.api.v1 import company
 from backend.app.api.v1 import customer
+from backend.app.api.v1 import packages
 
 
 api_router = APIRouter()
@@ -32,4 +33,13 @@ api_router.include_router(
 
 api_router.include_router(
     customer.router,
+)
+
+
+# ==========================================================
+# PACKAGES
+# ==========================================================
+
+api_router.include_router(
+    packages.router,
 )
