@@ -16,6 +16,7 @@ from backend.app.models.customer import Customer
 from backend.app.models.user import User  # noqa: F401
 from backend.app.models.package import Package
 from backend.app.models.subscription import Subscription
+from backend.app.models.payment import Payment
 
 
 @dataclass
@@ -66,6 +67,7 @@ def db_engine():
             Customer.__table__,
             Package.__table__,
             Subscription.__table__,
+            Payment.__table__,
         ],
     )
 
@@ -74,6 +76,7 @@ def db_engine():
     Base.metadata.drop_all(
         bind=engine,
         tables=[
+            Payment.__table__,
             Subscription.__table__,
             Package.__table__,
             Customer.__table__,

@@ -91,3 +91,8 @@ class Company(Base, BaseModel):
         back_populates="company",
         cascade="all, delete-orphan",
     )
+
+    payments = relationship(
+        "Payment",
+        back_populates="company",
+    )

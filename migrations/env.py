@@ -5,7 +5,15 @@ from sqlalchemy import engine_from_config, pool
 from alembic import context
 
 from backend.app.core.config import settings
-from backend.app.database.base import Base
+from backend.app.database.database import Base
+from backend.app.models import (
+    Company,
+    Customer,
+    Package,
+    Payment,
+    Subscription,
+    User,
+)
 
 # Alembic Config object
 config = context.config
@@ -17,7 +25,8 @@ config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# Import all models
+# Import all models so SQLAlchemy registers their tables
+# with the same Base.metadata used by the application.
 target_metadata = Base.metadata
 
 
@@ -48,7 +57,6 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-
         context.configure(
             connection=connection,
             target_metadata=target_metadata,

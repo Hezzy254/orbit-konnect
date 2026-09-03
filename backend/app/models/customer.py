@@ -78,3 +78,8 @@ class Customer(Base, BaseModel):
         "Subscription",
         back_populates="customer",
     )
+
+    payments = relationship(
+        "Payment",
+        back_populates="customer",
+    )

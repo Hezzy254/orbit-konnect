@@ -4,6 +4,7 @@ from backend.app.api.v1 import auth
 from backend.app.api.v1 import company
 from backend.app.api.v1 import customer
 from backend.app.api.v1 import packages
+from backend.app.api.v1 import payments
 from backend.app.api.v1 import subscriptions
 
 
@@ -52,4 +53,13 @@ api_router.include_router(
 
 api_router.include_router(
     subscriptions.router,
+)
+
+
+# ==========================================================
+# PAYMENTS
+# ==========================================================
+
+api_router.include_router(
+    payments.router,
 )

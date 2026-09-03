@@ -19,10 +19,6 @@ from backend.app.models.package import PackageDurationUnit
 
 
 class SubscriptionStatus(str, Enum):
-    """
-    Lifecycle states for a customer subscription.
-    """
-
     PENDING = "PENDING"
     ACTIVE = "ACTIVE"
     SUSPENDED = "SUSPENDED"
@@ -31,14 +27,6 @@ class SubscriptionStatus(str, Enum):
 
 
 class Subscription(Base, BaseModel):
-    """
-    Represents a customer's purchased service subscription.
-
-    Package information is snapshotted at subscription creation
-    so historical subscription terms remain unchanged if the
-    original package is modified later.
-    """
-
     __tablename__ = "subscriptions"
 
     id: Mapped[int] = mapped_column(
@@ -71,10 +59,6 @@ class Subscription(Base, BaseModel):
         index=True,
     )
 
-    # ---------------------------------------------------------
-    # Historical package snapshot
-    # ---------------------------------------------------------
-
     package_name: Mapped[str] = mapped_column(
         String(100),
         nullable=False,
@@ -105,10 +89,6 @@ class Subscription(Base, BaseModel):
         nullable=False,
     )
 
-    # ---------------------------------------------------------
-    # Service lifecycle
-    # ---------------------------------------------------------
-
     start_at: Mapped[datetime | None] = mapped_column(
         DateTime,
         nullable=True,
@@ -127,10 +107,6 @@ class Subscription(Base, BaseModel):
         nullable=False,
     )
 
-    # ---------------------------------------------------------
-    # Relationships
-    # ---------------------------------------------------------
-
     company = relationship(
         "Company",
         back_populates="subscriptions",
@@ -144,4 +120,9 @@ class Subscription(Base, BaseModel):
     package = relationship(
         "Package",
         back_populates="subscriptions",
+    )
+
+    payments = relationship(
+        "Payment",
+        back_populates="subscription",
     )
