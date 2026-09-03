@@ -15,6 +15,7 @@ from backend.app.models.company import Company
 from backend.app.models.customer import Customer
 from backend.app.models.user import User  # noqa: F401
 from backend.app.models.package import Package
+from backend.app.models.subscription import Subscription
 
 
 @dataclass
@@ -64,6 +65,7 @@ def db_engine():
             Company.__table__,
             Customer.__table__,
             Package.__table__,
+            Subscription.__table__,
         ],
     )
 
@@ -72,6 +74,7 @@ def db_engine():
     Base.metadata.drop_all(
         bind=engine,
         tables=[
+            Subscription.__table__,
             Package.__table__,
             Customer.__table__,
             Company.__table__,
@@ -208,5 +211,42 @@ def create_customer(db: Session):
         customer_id = result.inserted_primary_key[0]
 
         return db.get(Customer, customer_id)
+
+    return _create
+
+
+@pytest.fixture
+def create_package(db: Session):
+    """
+    Directly insert a package for setup scenarios.
+
+    This bypasses the API so tests can create precise database states
+    without coupling setup to the behavior being tested.
+    """
+
+    def _create(company_id=1, **overrides):
+        values = {
+            "company_id": company_id,
+            "name": "Test Package",
+            "download_speed_mbps": 15,
+            "upload_speed_mbps": 10,
+            "duration_value": 30,
+            "duration_unit": "DAY",
+            "price": 6,
+            "description": "Test package",
+            "is_active": True,
+        }
+
+        values.update(overrides)
+
+        result = db.execute(
+            Package.__table__.insert().values(**values)
+        )
+
+        db.commit()
+
+        package_id = result.inserted_primary_key[0]
+
+        return db.get(Package, package_id)
 
     return _create

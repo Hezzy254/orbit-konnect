@@ -95,3 +95,8 @@ class Package(Base, BaseModel):
         "Company",
         back_populates="packages",
     )
+
+    subscriptions = relationship(
+        "Subscription",
+        back_populates="package",
+    )

@@ -1,0 +1,7 @@
+warning: in the working copy of 'tests/conftest.py', LF will be replaced by CRLF the next time Git touches it
+ backend/app/api/v1/router.py   | 10 [32m++++++++++[m
+ backend/app/models/company.py  |  6 [32m++++++[m
+ backend/app/models/customer.py |  5 [32m+++++[m
+ backend/app/models/package.py  |  5 [32m+++++[m
+ tests/conftest.py              | 40 [32m++++++++++++++++++++++++++++++++++++++++[m
+ 5 files changed, 66 insertions(+)
