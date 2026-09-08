@@ -4,6 +4,7 @@ from .package import Package
 from .payment import Payment
 from .subscription import Subscription
 from .user import User
+from .network_device import NetworkDevice
 
 __all__ = [
     "Company",
@@ -12,4 +13,5 @@ __all__ = [
     "Payment",
     "Subscription",
     "User",
+    "NetworkDevice",
 ]

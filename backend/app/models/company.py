@@ -96,3 +96,9 @@ class Company(Base, BaseModel):
         "Payment",
         back_populates="company",
     )
+
+    network_devices = relationship(
+        "NetworkDevice",
+        back_populates="company",
+        cascade="all, delete-orphan",
+    )

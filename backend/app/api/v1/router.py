@@ -6,6 +6,7 @@ from backend.app.api.v1 import customer
 from backend.app.api.v1 import packages
 from backend.app.api.v1 import payments
 from backend.app.api.v1 import subscriptions
+from backend.app.api.v1 import network_devices
 
 
 api_router = APIRouter()
@@ -62,4 +63,13 @@ api_router.include_router(
 
 api_router.include_router(
     payments.router,
+)
+
+
+# ==========================================================
+# NETWORK DEVICES
+# ==========================================================
+
+api_router.include_router(
+    network_devices.router,
 )

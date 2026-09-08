@@ -21,6 +21,9 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
 
+    # Network credential encryption
+    NETWORK_CREDENTIAL_ENCRYPTION_KEY: str
+
     # MikroTik
     MIKROTIK_HOST: str
     MIKROTIK_USERNAME: str
